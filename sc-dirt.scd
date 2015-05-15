@@ -120,7 +120,9 @@ SynthDef(\dirt, { |out, bufnum, start=0, end=1, pan, amp = 0.1,
 	);
 	env = env * ~gateCutGroup.value; // this synth can be freed by cutgroup mechanism
 	OffsetOut.ar(out,
-		PanAz.ar(~numChannels, sound, pan, env)
+		if(~numChannels==2,Pan2.ar(sound, (pan*2)-1, env),
+			                       PanAz.ar(~numChannels, sound, pan, env)
+		)
 	);
 }).add;
 
@@ -399,7 +401,9 @@ SynthDef(\imp, { |out, speed = 1, start=0, end=1, pan, accelerate, amp = 0.1, of
 	sound = Blip.ar(rate.linexp(0, 1, 15 * [1, 2, 5], 200), 200 * phase).sum;
 	env = env * ~gateCutGroup.value; // this synth can be freed by cutgroup mechanism
 	OffsetOut.ar(out,
-		PanAz.ar(~numChannels, sound, pan, env)
+		if(~numChannels==2,Pan2.ar(sound, (pan*2)-1, env),
+			                       PanAz.ar(~numChannels, sound, pan, env)
+		)
 	);
 }).add;
 )
@@ -418,12 +422,24 @@ Tdef(\x, {
 }).play;
 )
 
+~buffers[\CY][0].duration;
+~buffers[\CY][0].samplerate;
+
 
 // network test
 n = NetAddr("127.0.0.1", 57120);
+// Should pan left and right?
+n.sendMsg(\play, 1, 'CY:10',0,0,1,1,0);
+n.sendMsg(\play, 1, 'CY:10',0,0,1,1,1);
 
-n.sendMsg(\play, 1, 'CY:10');
-n.sendMsg(\play, 1, 'CY');
+// feeding back
+n.sendMsg(\play, 1, 'CY:10',0,0,1,1,0.5,0,"o");
+
+n.sendMsg(\play, 1, 'CY:10',0,0,1,1,0.5,0);
+
+
+n.sendMsg(\play, 1, 'breaks125');
+
 n.sendMsg(\play, 1, \imp);
 
 (
