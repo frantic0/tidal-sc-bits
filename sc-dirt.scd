@@ -145,7 +145,7 @@ SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
 		[450, 800, 2830, 3500, 4950],
 		[325, 700, 2530, 3500, 4950]
 	]);
-	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, 1/resonance); // not sure how to use this here.
+	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.1, resonance * 0.2); // not sure how to use this here.
 	signal = signal.sum; // sum all filters
 	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
 	ReplaceOut.ar(out, signal)
@@ -377,7 +377,10 @@ Tdef(\x, {
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100);
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100, crush: 4);
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a);
-~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1.4);
+
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1.5);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a, resonance: 1.5);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \o, resonance: 1.5);
 
 
 // test delay:
