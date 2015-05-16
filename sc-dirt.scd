@@ -341,7 +341,7 @@ OSCdef(\dirt, { |msg, time|
 (
 Tdef(\x, {
 	loop {
-		~dirt.(1, 'CY:10', 0, 0.1.rand, 1.0.rand, 1 + 1.3.rand2, 2.rand2, accelerate:0);
+		~dirt.(0, 1, 'CY:10', 0, 0.1.rand, 1.0.rand, 1 + 1.3.rand2, 2.rand2, accelerate:0);
 		(0.2 * [1, 2, 1/3]).choose.wait;
 	}
 }).play;
@@ -350,41 +350,41 @@ Tdef(\x, {
 (
 Tdef(\x, {
 	loop {
-		~dirt.(1, 'CY:10', 0, 0.1.rand, 1.0.rand, 1 + 1.3.rand2, 2.rand2, accelerate:0.2.rand2, crush:8);
+		~dirt.(0, 1, 'CY:10', 0, 0.1.rand, 1.0.rand, 1 + 1.3.rand2, 2.rand2, accelerate:0.2.rand2, crush:8);
 		(0.2 * [1, 2, 1/3]).choose.wait;
 	}
 }).play;
 )
 
 // cutgroup tests
-~dirt.(1, 'CY:10', speed: 0.02, cutgroup: -8); // really slow, to keep it on
-~dirt.(1, 'CY:10', speed: 0.02, cutgroup: -8); // cut the old one
-~dirt.(1, 'CY:10', speed: 0.02, cutgroup: -8); // ... again
+~dirt.(0, 1, 'CY:10', speed: 0.02, cutgroup: -8); // really slow, to keep it on
+~dirt.(0, 1, 'CY:10', speed: 0.02, cutgroup: -8); // cut the old one
+~dirt.(0, 1, 'CY:10', speed: 0.02, cutgroup: -8); // ... again
 
 
 //  With negative, only stop the same sample from playing in the same cutgroup
-~dirt.(1, 'CY:9', speed: 0.02, cutgroup: -8); // a different sample, is added
-~dirt.(1, 'CY:9', speed: 0.02, cutgroup: -8); // the same sample, frees
+~dirt.(0, 1, 'CY:9', speed: 0.02, cutgroup: -8); // a different sample, is added
+~dirt.(0, 1, 'CY:9', speed: 0.02, cutgroup: -8); // the same sample, frees
 
 //  with positive integers, stop samples playing that are in the same cutgroup.
-~dirt.(1, 'CY:10', speed: 0.02, cutgroup: 8); // should free all others
+~dirt.(0, 1, 'CY:10', speed: 0.02, cutgroup: 8); // should free all others
 
 
 // test effects:
-~dirt.(1, 'CY:10', speed: 0.1, crush: 4);
-~dirt.(1, 'CY:10', speed: 1, hcutoff: 1000, hresonance: 20);
-~dirt.(1, 'CY:10', speed: 1, hcutoff: 3000, hresonance: 10);
-~dirt.(1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100);
-~dirt.(1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100, crush: 4);
-~dirt.(1, 'CY:10', speed: 1, vowel: \a);
-~dirt.(1, 'CY:10', speed: 1, vowel: \i, resonance: 1.4);
+~dirt.(0, 1, 'CY:10', speed: 0.1, crush: 4);
+~dirt.(0, 1, 'CY:10', speed: 1, hcutoff: 1000, hresonance: 20);
+~dirt.(0, 1, 'CY:10', speed: 1, hcutoff: 3000, hresonance: 10);
+~dirt.(0, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100);
+~dirt.(0, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100, crush: 4);
+~dirt.(0, 1, 'CY:10', speed: 1, vowel: \a);
+~dirt.(0, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1.4);
 
 
 // test delay:
 
-~dirt.(1, 'CY:10', speed: 1, delaytime: 0.8, delay: 1);
-~dirt.(1, 'CY:10', speed: 1, delaytime: 0.8, delay: 0);
-~dirt.(1, 'CY:10', speed: 1, delaytime: 0.2, delay: 1);
+~dirt.(0, 1, 'CY:10', speed: 1, delaytime: 0.8, delay: 1);
+~dirt.(0, 1, 'CY:10', speed: 1, delaytime: 0.8, delay: 0);
+~dirt.(0, 1, 'CY:10', speed: 1, delaytime: 0.2, delay: 1);
 
 
 // test replacement:
@@ -411,14 +411,14 @@ SynthDef(\imp, { |out, speed = 1, start=0, end=1, pan, accelerate, amp = 0.1, of
 )
 
 
-~dirt.(1, 'imp', speed: 1, start: 0, end: 1);
-~dirt.(1, 'imp', speed: 1, start: 0.5, end: 1);
-~dirt.(1, 'imp', speed: 0.1, start: 0, end: 1, accelerate: 3);
+~dirt.(0, 1, 'imp', speed: 1, start: 0, end: 1);
+~dirt.(0, 1, 'imp', speed: 1, start: 0.5, end: 1);
+~dirt.(0, 1, 'imp', speed: 0.1, start: 0, end: 1, accelerate: 3);
 
 (
 Tdef(\x, {
 	loop {
-		~dirt.(1, 'imp', 0, speed:rrand(1.0, 2.0), start:0, end: 2.0.rand, accelerate:1, hcutoff: 4000.0.rand, hresonance: 0.5.rand);
+		~dirt.(0, 1, 'imp', 0, speed:rrand(1.0, 2.0), start:0, end: 2.0.rand, accelerate:1, hcutoff: 4000.0.rand, hresonance: 0.5.rand);
 		0.5.wait;
 	}
 }).play;
