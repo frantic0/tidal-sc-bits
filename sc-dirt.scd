@@ -120,9 +120,11 @@ SynthDef(\dirt, { |out, bufnum, start=0, end=1, pan, amp = 0.1,
 	);
 	env = env * ~gateCutGroup.value; // this synth can be freed by cutgroup mechanism
 	OffsetOut.ar(out,
-		if(~numChannels==2,Pan2.ar(sound, (pan*2)-1, env),
-			                       PanAz.ar(~numChannels, sound, pan, env)
-		)
+		if(~numChannels == 2) {
+			Pan2.ar(sound, (pan * 2) - 1, env)
+		} {
+			PanAz.ar(~numChannels, sound, pan, env)
+		}
 	);
 }).add;
 
