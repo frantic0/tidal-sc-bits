@@ -1,0 +1,6 @@
+let scdirt = dirt {timestamp = BundleStamp}
+scdirtStream = stream "127.0.0.1" 57120 scdirt
+
+scd <- scdirtStream
+
+scd $ sound "CY:0"
