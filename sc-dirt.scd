@@ -73,44 +73,14 @@ The language initialises the synth with its sample id (some number that correlat
 	EnvGen.kr(Env.asr(0, 1, 0.01), 1 - free, doneAction:2);
 };
 
-SynthDef(\dirt, { |out, bufnum, start=0, end=1, pan, amp = 0.1,
+SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, duration, pan, amp = 0.1,
 	speed = 1, accelerate, offset, cps, unit, doneAction=2|
 
-	var env, sound, dur, length, rate;
-	var sampleFrames, sampleDur, startFrame, sampleSampleRate;
+	var env, sound, rate;
 
-	length = end - start;
-	sampleDur = BufDur.kr(bufnum);
-	sampleFrames = BufFrames.kr(bufnum);
-	sampleSampleRate = BufSampleRate.kr(bufnum);
+	rate = speed + Sweep.kr(1, accelerate); // maybe this needs to be moved up?
+	env = EnvGen.ar(Env.linen(0, duration, 0.001, amp, -4), doneAction:doneAction);
 
-	// need to check these carefully
-	// todo: account for accelerate
-	// maybe implement them on the language side
-	// but we need to make sure that the buffer data is there.
-
-	rate = Select.kr(unit, [
-		speed,
-		cps * speed / sampleDur,
-		speed / cps
-	]);
-
-	// if we accelerate, do we get shorter?
-	dur = Select.kr(unit, [
-		sampleDur * length,
-		length / cps,
-		length
-	]) / rate;
-
-	startFrame = Select.kr(unit, [
-		sampleFrames * start,
-		sampleSampleRate / cps * start,
-		sampleSampleRate * start
-	]);
-
-	rate = rate + Sweep.kr(1, accelerate); // maybe this needs to be moved up?
-
-	env = EnvGen.ar(Env.linen(0, dur, 0.001, amp, -4), doneAction:doneAction);
 	sound = PlayBuf.ar(1,
 		bufnum,
 		// bufratescale adjusts the rate if sample doesn't have the same rate as soundcard
@@ -216,8 +186,9 @@ Functions for sending synths to the server.
 	bandqf = 0, bandq = 0,
 	unit = \r|
 
-	var amp, allbufs, buffer, group, latency;
+	var amp, allbufs, buffer, bufnum, group, latency;
 	var instrument, key, index, sample;
+	var startFrame, duration, length;
 
 	#key, index = name.asString.split($:);
 	key = key.asSymbol;
@@ -226,8 +197,28 @@ Functions for sending synths to the server.
 
 	if(allbufs.notNil) {
 		instrument = \dirt;
-		buffer = allbufs.wrapAt(index).bufnum;
+		buffer = allbufs.wrapAt(index);
+		bufnum = buffer.bufnum;
 		sample = name.identityHash;
+		length = (end - start).max(0); // we could allow reverse playing
+		switch(unit,
+			\r, {
+				startFrame = buffer.numFrames * start;
+				duration = buffer.duration * length;
+			},
+			\c, {
+				duration = length / cps;
+				speed = speed * cps;
+				startFrame = start * buffer.numFrames;
+
+			},
+			\s, {
+				startFrame = start * buffer.sampleRate;
+				duration = length * buffer.sampleRate;
+			}
+		);
+
+
 	} {
 		instrument = key;
 	};
@@ -259,7 +250,8 @@ Functions for sending synths to the server.
 
 			~sendSynth.(instrument, [
 				speed: speed,
-				bufnum: buffer,
+				bufnum: bufnum,
+				duration: duration,
 				start: start,
 				end: end,
 				pan: pan,
@@ -355,6 +347,57 @@ Tdef(\x, {
 	}
 }).play;
 )
+
+// test unit
+// \r
+(
+Tdef(\x, {
+	var name = 'CY';
+	var buffer = ~buffers[name][0];
+	var cps = 1;
+	loop {
+		~dirt.(nil, cps:cps, name:name, unit: \r, start: 0, end: 0.5);
+		(1/cps).wait;
+	}
+}).play
+)
+
+// \c
+(
+Tdef(\x, {
+	var name = 'CY';
+	var buffer = ~buffers[name][0];
+	var cps = 1.0.rand;
+	loop {
+		~dirt.(nil, cps:cps, name:name, unit: \c);
+		(1/cps).wait;
+	}
+}).play
+)
+
+// \s
+(
+Tdef(\x, {
+	var name = 'CY';
+	var buffer = ~buffers[name][0];
+	var cps = 0.5;
+	loop {
+		~dirt.(nil, cps:cps, name:name, unit: \c, start: 0, end: 0.5);
+		0.5.wait;
+	}
+}).play
+)
+
+
+
+
+
+
+
+
+
+
+
 
 // cutgroup tests
 ~dirt.(nil, 1, 'CY:10', speed: 0.02, cutgroup: -8); // really slow, to keep it on
