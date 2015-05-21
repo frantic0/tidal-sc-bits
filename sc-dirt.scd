@@ -74,13 +74,16 @@ The language initialises the synth with its sample id (some number that correlat
 	EnvGen.kr(Env.asr(0, 1, 0.01), 1 - free, doneAction:2);
 };
 
-SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, duration, pan, amp = 0.1,
+/*
+note: "sustain" is the convention in sclang for the total duration of a sound (not the release part)
+*/
+SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, sustain, pan, amp = 0.1,
 	speed = 1, accelerate, offset, cps, unit, doneAction=2|
 
 	var env, sound, rate;
 
 	rate = speed + Sweep.kr(1, accelerate); // maybe this needs to be moved up?
-	env = EnvGen.ar(Env.linen(0, duration, 0.001, amp, -4), doneAction:doneAction);
+	env = EnvGen.ar(Env.linen(0, sustain, 0.001, amp, -4), doneAction:doneAction);
 
 	sound = PlayBuf.ar(1,
 		bufnum,
@@ -99,6 +102,7 @@ SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, duration, pan, amp =
 	);
 }).add;
 
+
 /*
 The following effect synths are freed when input is silent for longer than 0.1 sec. This makes it unnecessary to keep track of any synths. But this may cause problems with samples that contain silence. One way to solve this involves bookkeeping of synths on the language side (haskell or sclang). For now, we use the simplest possible way.
 */
@@ -106,7 +110,7 @@ The following effect synths are freed when input is silent for longer than 0.1 s
 // these are just placeholders, not sure how they are best translated
 
 // we need to select formant bands for the vowels in sclang (at least this would be the most efficient)
-SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
+SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel, sustain = 1|
 	var signal = In.ar(out, ~numChannels);
 	var freq = cutoff.linexp(0, 1, 200, 500); // adjust this and the vowel freqencies
 	var vowelFreqs = Select.kr(vowel, [
@@ -116,6 +120,7 @@ SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
 		[450, 800, 2830, 3500, 4950],
 		[325, 700, 2530, 3500, 4950]
 	]);
+	signal = signal * EnvGen.kr(Env.linen(0, sustain, 0.02));
 	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.1, resonance * 0.2); // not sure how to use this here.
 	signal = signal.sum; // sum all filters
 	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
@@ -124,24 +129,28 @@ SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
 
 // would be nice to have some more parameters in some cases
 
-SynthDef(\dirt_crush, { |out, crush = 4|
+SynthDef(\dirt_crush, { |out, crush = 4, sustain = 1|
 	var signal = In.ar(out, ~numChannels);
+	signal = signal * EnvGen.kr(Env.linen(0, sustain, 0.02), doneAction:2);
 	signal = signal.round(0.5 ** crush);
-	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
 	ReplaceOut.ar(out, signal)
 }).add;
 
-SynthDef(\dirt_hpf, { |out, hcutoff = 440, hresonance = 0|
+SynthDef(\dirt_hpf, { |out, hcutoff = 440, hresonance = 0, sustain = 1|
 	var signal = In.ar(out, ~numChannels);
+	var env = EnvGen.kr(Env.linen(0, sustain, 0.02));
+	signal = signal * env;
 	signal = RHPF.ar(signal, hcutoff, hresonance.linexp(0, 1, 1, 0.001));
-	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
+	DetectSilence.ar(LeakDC.ar(signal) + (100 * env), doneAction:2);
 	ReplaceOut.ar(out, signal)
 }).add;
 
-SynthDef(\dirt_bpf, { |out, bandqf = 440, bandq = 10|
+SynthDef(\dirt_bpf, { |out, bandqf = 440, bandq = 10, sustain = 1|
 	var signal = In.ar(out, ~numChannels);
+	var env = EnvGen.kr(Env.linen(0, sustain, 0.02));
+	signal = signal * env;
 	signal = BPF.ar(signal, bandqf, 1/bandq) * max(bandq, 1.0);
-	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
+	DetectSilence.ar(LeakDC.ar(signal) + (100 * env), doneAction:2);
 	ReplaceOut.ar(out, signal)
 }).add;
 
@@ -189,7 +198,7 @@ Functions for sending synths to the server.
 
 	var amp, allbufs, buffer, bufnum, group, latency;
 	var instrument, key, index, sample;
-	var startFrame, numFrames, duration, bufferDuration, length, sampleRate;
+	var startFrame, numFrames, sustain, bufferDuration, length, sampleRate;
 
 	#key, index = name.asString.split($:);
 	key = key.asSymbol;
@@ -226,16 +235,16 @@ Functions for sending synths to the server.
 		switch(unit,
 			\r, {
 				startFrame = numFrames * start;
-				duration = bufferDuration * length;
+				sustain = bufferDuration * length;
 			},
 			\c, {
-				duration = length / cps;
+				sustain = length / cps;
 				speed = speed * cps;
 				startFrame = start * numFrames;
 			},
 			\s, {
 				startFrame = start * sampleRate;
-				duration = length * sampleRate;
+				sustain = length * sampleRate;
 			}
 		);
 
@@ -266,7 +275,7 @@ Functions for sending synths to the server.
 			~sendSynth.(instrument, [
 				speed: speed,
 				bufnum: bufnum,
-				duration: duration,
+				sustain: sustain,
 				startFrame: startFrame,
 				start: start,
 				end: end,
@@ -287,7 +296,8 @@ Functions for sending synths to the server.
 						out: ~bus.index,
 						vowel: vowel,
 						cutoff: cutoff,
-						resonance: resonance
+						resonance: resonance,
+						sustain: sustain
 					]
 				);
 
@@ -297,7 +307,8 @@ Functions for sending synths to the server.
 				~sendSynth.(\dirt_crush,
 					[
 						crush: crush,
-						out: ~bus.index
+						out: ~bus.index,
+						sustain: sustain
 					]
 				);
 			};
@@ -306,7 +317,8 @@ Functions for sending synths to the server.
 					[
 						hcutoff: hcutoff,
 						hresonance: hresonance,
-						out: ~bus.index
+						out: ~bus.index,
+						sustain: sustain
 					]
 				);
 			};
@@ -315,7 +327,8 @@ Functions for sending synths to the server.
 					[
 						bandqf: bandqf,
 						bandq: bandq,
-						out: ~bus.index
+						out: ~bus.index,
+						sustain: sustain
 					]
 				);
 			};
@@ -337,6 +350,7 @@ Functions for sending synths to the server.
 
 
 OSCdef(\dirt, { |msg, time|
+	msg.postcs;
 	~dirt.(time, *msg[1..]);
 }, '/play');
 )
@@ -376,12 +390,13 @@ Tdef(\x, {
 }).play
 )
 
+// no?
 // \c
 (
 Tdef(\x, {
 	var name = 'CY';
 	var buffer = ~buffers[name][0];
-	var cps = 1.0.rand;
+	var cps = 1.0.rand + 0.5;
 	loop {
 		~dirt.(nil, cps:cps, name:name, unit: \c);
 		(1/cps).wait;
@@ -509,3 +524,5 @@ n.sendBundle(1.2, [\play, 1, 'CY']);
 n.sendBundle(1.2, [\play, 1, 'CY']);
 )
 
+OSCFunc.trace(true, true);
+OSCFunc.trace(false, false);
