@@ -1,3 +1,12 @@
+
+
+/* ------------------------------------------
+
+First Part: Initialise the Server
+
+*/
+
+
 (
 
 s.options.numBuffers = 1024 * 16;
@@ -26,6 +35,12 @@ s.reboot;
 )
 
 
+/* ------------------------------------------
+
+Second Part: Load whatever samples you want to use
+
+*/
+
 (
 var path = "samples".resolveRelative; // put your sample path here
 var folderPaths = pathMatch(path +/+ "**");
@@ -46,11 +61,15 @@ folderPaths.do { |folderPath|
 
 
 
-// test buffers
-~buffers.keys;
-~buffers['CY'][1].play
 
-// init sc-dirt
+/* -----------------------------------------
+
+
+Third Part: init scdirt
+
+*/
+
+
 (
 /*
 in order to avoid bookkeeping on the language side, we implement cutgroups as follows:
@@ -354,6 +373,11 @@ OSCdef(\dirt, { |msg, time|
 	~dirt.(time, *msg[1..]);
 }, '/play');
 )
+
+
+
+
+// -----------------------------------------------------------------------------------------
 
 
 // some tests
