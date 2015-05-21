@@ -2,6 +2,7 @@
 
 s.options.numBuffers = 1024 * 16;
 ~numChannels = 2; // adjust this to your channel setup
+~timingOffset = 0; // adjust an offset for the OSC timestamps here
 
 // we need this here, because it is a global effect (repeated below under effects)
 SynthDef(\dirt_delay, { |out, delayBus, delaytime, delayfeedback|
@@ -165,11 +166,11 @@ SynthDef(\dirt_delay, { |out, delayBus, delaytime, delayfeedback|
 Functions for sending synths to the server.
 */
 
-~sendSynth = { |instrument, args|
+~sendSynth = { |instrument, args, group = 1|
 	s.sendMsg(\s_new, instrument,
 		-1, // no id
 		1, // add action: addToTail
-		1, // send to group 1
+		group,
 		*args // append all other args
 	)
 };
@@ -188,48 +189,60 @@ Functions for sending synths to the server.
 
 	var amp, allbufs, buffer, bufnum, group, latency;
 	var instrument, key, index, sample;
-	var startFrame, duration, length;
+	var startFrame, numFrames, duration, bufferDuration, length, sampleRate;
 
 	#key, index = name.asString.split($:);
 	key = key.asSymbol;
 	allbufs = ~buffers[key];
 	index = (index ? 0).asInteger;
 
-	if(allbufs.notNil) {
-		instrument = \dirt;
-		buffer = allbufs.wrapAt(index);
-		bufnum = buffer.bufnum;
-		sample = name.identityHash;
-		length = (end - start).max(0); // we could allow reverse playing
+	if(allbufs.isNil and: { SynthDescLib.at(key).isNil }) {
+		"Dirt: no sample or synth definition found: %".format(key).postln;
+	} {
+
+		if(allbufs.notNil) {
+			instrument = \dirt;
+			buffer = allbufs.wrapAt(index);
+			bufnum = buffer.bufnum;
+			numFrames = buffer.numFrames;
+			bufferDuration = buffer.duration;
+			sampleRate = buffer.sampleRate;
+			sample = name.identityHash;
+		} {
+			instrument = key;
+			sampleRate = s.sampleRate;
+			numFrames = sampleRate; // assume one second
+			bufferDuration = 1.0;
+		};
+
+		if(end >= start) {
+			length = end - start;
+		} {
+			// backwards
+			length = start - end;
+			speed = speed.neg;
+		};
+
 		switch(unit,
 			\r, {
-				startFrame = buffer.numFrames * start;
-				duration = buffer.duration * length;
+				startFrame = numFrames * start;
+				duration = bufferDuration * length;
 			},
 			\c, {
 				duration = length / cps;
 				speed = speed * cps;
-				startFrame = start * buffer.numFrames;
-
+				startFrame = start * numFrames;
 			},
 			\s, {
-				startFrame = start * buffer.sampleRate;
-				duration = length * buffer.sampleRate;
+				startFrame = start * sampleRate;
+				duration = length * sampleRate;
 			}
 		);
 
-
-	} {
-		instrument = key;
-	};
-
-	if(allbufs.notNil or: { SynthDescLib.at(key).notNil }) {
-
-		unit = #[\r, \c, \s].indexOf(unit) ? 0;
 		amp = pow(gain / 2, 4);
 
 		if(scheduleTime.notNil) {
-			latency = scheduleTime - Main.elapsedTime;
+			latency = scheduleTime - Main.elapsedTime + ~timingOffset;
 			if(latency > 2) {
 				"too long delay. Networks clocks may not be in sync".warn;
 				latency = 0.2;
@@ -237,6 +250,7 @@ Functions for sending synths to the server.
 		};
 
 		s.makeBundle(latency, { // use this to build a bundle
+			var group;
 
 			if(cutgroup != 0) {
 				// set group 1, in which all synths are living
@@ -248,10 +262,12 @@ Functions for sending synths to the server.
 				s.sendMsg(\n_set, ~delaySynthID, \delaytime, delaytime, \delayfeedback, delayfeedback);
 			};
 
+			group = s.nextNodeID;
 			~sendSynth.(instrument, [
 				speed: speed,
 				bufnum: bufnum,
 				duration: duration,
+				startFrame: startFrame,
 				start: start,
 				end: end,
 				pan: pan,
@@ -316,8 +332,6 @@ Functions for sending synths to the server.
 
 		});
 
-	} {
-		"no sample or instrument found for this name: %\n".postf(name);
 	}
 };
 
@@ -450,7 +464,7 @@ SynthDef(\imp, { |out, speed = 1, start=0, end=1, pan, accelerate, amp = 0.1, of
 	env = env * ~gateCutGroup.value; // this synth can be freed by cutgroup mechanism
 	OffsetOut.ar(out,
 		if(~numChannels==2,Pan2.ar(sound, (pan*2)-1, env),
-			                       PanAz.ar(~numChannels, sound, pan, env)
+			PanAz.ar(~numChannels, sound, pan, env)
 		)
 	);
 }).add;
