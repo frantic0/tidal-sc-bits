@@ -277,14 +277,16 @@ Functions for sending synths to the server.
 
 			if(vowel.notNil) {
 				vowel = [\a, \e, \i, \o, \u].indexOf(vowel); // convert to number
-				~sendSynth.(\dirt_vowel,
-					[
-						out: ~bus.index,
-						vowel: vowel,
-						cutoff: cutoff,
-						resonance: resonance
-					]
-				);
+				if(vowel.notNil) {
+					~sendSynth.(\dirt_vowel,
+						[
+							out: ~bus.index,
+							vowel: vowel,
+							cutoff: cutoff,
+							resonance: resonance
+						]
+					);
+				};
 
 			};
 
