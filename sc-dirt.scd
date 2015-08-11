@@ -207,7 +207,7 @@ Functions for sending synths to the server.
 ~dirt = {
 	|scheduleTime, cps = 1, name, offset = 0, start = 0, end = 1, speed = 1, pan = 0, velocity,
 	vowel, cutoff = 300, resonance = 0.5,
-	accelerate = 0, shape, krio, gain = 2, cutgroup = 0,
+	accelerate = 0, shape, krio, gain = 1, cutgroup = 0,
 	delay = 0, delaytime = 0, delayfeedback = 0,
 	crush = 0,
 	coarse = 0,
@@ -267,7 +267,7 @@ Functions for sending synths to the server.
 			}
 		);
 
-		amp = pow(gain / 2, 4);
+		amp = pow(gain, 4);
 
 		if(scheduleTime.notNil) {
 			latency = scheduleTime - Main.elapsedTime + ~timingOffset;
