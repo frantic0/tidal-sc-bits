@@ -218,6 +218,7 @@ Functions for sending synths to the server.
 
 	var amp, allbufs, buffer, group, latency;
 	var instrument, key, index, sample;
+	var temp;
 
 	#key, index = name.asString.split($:);
 	key = key.asSymbol;
@@ -231,6 +232,8 @@ Functions for sending synths to the server.
 	} {
 		instrument = key;
 	};
+
+	if(speed < 0) { temp = end; end = start; start = temp;  };
 
 	if(allbufs.notNil or: { SynthDescLib.at(key).notNil }) {
 
@@ -337,6 +340,12 @@ OSCdef(\dirt, { |msg, time|
 
 
 // some tests
+
+
+~dirt.(nil, 1, 'CY:10', speed: 1);
+~dirt.(nil, 1, 'CY:10', speed: -1); // backwards
+~dirt.(nil, 1, 'CY:10', speed: -1, accelerate:-0.9); // backwards accellerate
+
 
 (
 Tdef(\x, {
