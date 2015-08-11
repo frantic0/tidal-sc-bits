@@ -20,6 +20,10 @@ SynthDef(\dirt_delay, { |out, delayBus, delaytime, delayfeedback|
 	Out.ar(out, signal);
 }).add;
 
+SynthDef(\dirt_limiter, { |out|
+	var signal = In.ar(out, ~numChannels);
+	ReplaceOut.ar(signal, Limiter.ar(signal))
+}).add;
 
 
 s.tree = {
@@ -29,7 +33,10 @@ s.tree = {
 	~bus = Bus.audio(s, ~numChannels);
 	~delayBus =  Bus.audio(s, ~numChannels);
 	~delaySynthID = s.nextNodeID;
-	s.sendMsg(\s_new, \dirt_delay, ~delaySynthID, 3, 1, \delayBus, ~delayBus.index, \out, 0); // add delay after group 1
+	s.sendBundle(nil, // add delay and limiter after group 1
+		[\s_new, \dirt_limiter, -1, 3, 1, \out, 0],
+		[\s_new, \dirt_delay, ~delaySynthID, 3, 1, \delayBus, ~delayBus.index, \out, 0]
+	);
 };
 s.reboot;
 )
