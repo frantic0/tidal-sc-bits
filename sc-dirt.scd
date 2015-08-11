@@ -110,7 +110,7 @@ SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, endFrame, sustain, p
 	var env, sound, rate, phase;
 
 	rate = speed + Sweep.kr(1, accelerate); // maybe this needs to be moved up?
-	env = EnvGen.ar(Env.linen(0, sustain, 0.001, amp, -4), doneAction:doneAction);
+	env = EnvGen.ar(Env.linen(0, sustain, 0.001, amp, 'lin'), doneAction:doneAction);
 
 	// sample phase
 	// bufratescale adjusts the rate if sample doesn't have the same rate as soundcard
@@ -143,6 +143,7 @@ The following effect synths are freed when input is silent for longer than 0.1 s
 // we need to select formant bands for the vowels in sclang (at least this would be the most efficient)
 SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel, sustain = 1|
 	var signal = In.ar(out, ~numChannels);
+	var env = EnvGen.kr(Env.linen(0, sustain, 0.02, 1, 'sin'), doneAction:2);
 	var freq = cutoff.linexp(0, 1, 200, 500); // adjust this and the vowel freqencies
 	var vowelFreqs = Select.kr(vowel, [
 		[800, 1150, 2800, 3500, 4950],
@@ -154,8 +155,7 @@ SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel, sustain = 1|
 	signal = signal * EnvGen.kr(Env.linen(0, sustain, 0.02));
 	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.1, resonance * 0.2); // not sure how to use this here.
 	signal = signal.sum; // sum all filters
-	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
-	ReplaceOut.ar(out, signal)
+	XOut.ar(out, env, signal);
 }).add;
 
 // would be nice to have some more parameters in some cases
@@ -172,7 +172,9 @@ SynthDef(\dirt_hpf, { |out, hcutoff = 440, hresonance = 0, sustain = 1|
 	var env = EnvGen.kr(Env.linen(0, sustain, 0.02));
 	signal = signal * env;
 	signal = RHPF.ar(signal, hcutoff, hresonance.linexp(0, 1, 1, 0.001));
-	DetectSilence.ar(LeakDC.ar(signal) + (100 * env), doneAction:2);
+	signal = LeakDC.ar(signal);
+	DetectSilence.ar(signal + (100 * env), doneAction:2);
+	//signal = signal * EnvGen.kr(Env.linen(0, sustain, 0.02), doneAction:2);
 	ReplaceOut.ar(out, signal)
 }).add;
 
@@ -181,7 +183,9 @@ SynthDef(\dirt_bpf, { |out, bandqf = 440, bandq = 10, sustain = 1|
 	var env = EnvGen.kr(Env.linen(0, sustain, 0.02));
 	signal = signal * env;
 	signal = BPF.ar(signal, bandqf, 1/bandq) * max(bandq, 1.0);
-	DetectSilence.ar(LeakDC.ar(signal) + (100 * env), doneAction:2);
+	signal = LeakDC.ar(signal);
+	DetectSilence.ar(signal + (100 * env), doneAction:2);
+	//signal = signal * EnvGen.kr(Env.linen(0, sustain, 0.02), doneAction:2);
 	ReplaceOut.ar(out, signal)
 }).add;
 
@@ -490,6 +494,7 @@ Tdef(\x, {
 ~dirt.(nil, 1, 'CY:10', speed: 0.1, crush: 4);
 ~dirt.(nil, 1, 'CY:10', speed: 1, hcutoff: 1000, hresonance: 20);
 ~dirt.(nil, 1, 'CY:10', speed: 1, hcutoff: 3000, hresonance: 10);
+~dirt.(nil, 1, 'CY:10', speed: 3, hcutoff: 3000, hresonance: 10);
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100);
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100, crush: 4);
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a);
