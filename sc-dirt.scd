@@ -103,20 +103,25 @@ The language initialises the synth with its sample id (some number that correlat
 /*
 note: "sustain" is the convention in sclang for the total duration of a sound (not the release part)
 */
-SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, sustain, pan, amp = 0.1,
+
+SynthDef(\dirt, { |out, bufnum, start=0, end=1, startFrame, endFrame, sustain, pan, amp = 0.1,
 	speed = 1, accelerate, offset, cps, unit, doneAction=2|
 
-	var env, sound, rate;
+	var env, sound, rate, phase;
 
 	rate = speed + Sweep.kr(1, accelerate); // maybe this needs to be moved up?
 	env = EnvGen.ar(Env.linen(0, sustain, 0.001, amp, -4), doneAction:doneAction);
 
-	sound = PlayBuf.ar(1,
-		bufnum,
-		// bufratescale adjusts the rate if sample doesn't have the same rate as soundcard
-		rate * BufRateScale.kr(bufnum),
-		0,
-		startFrame
+	// sample phase
+	// bufratescale adjusts the rate if sample doesn't have the same rate as soundcard
+	phase =  Phasor.ar(0, rate * BufRateScale.kr(bufnum), startFrame, endFrame);
+
+	sound = BufRd.ar(
+		numChannels: 1,
+		bufnum: bufnum,
+		phase: phase,
+		loop: 0, // should we loop?
+		interpolation: 4
 	);
 	env = env * ~gateCutGroup.value; // this synth can be freed by cutgroup mechanism
 	OffsetOut.ar(out,
@@ -224,7 +229,7 @@ Functions for sending synths to the server.
 
 	var amp, allbufs, buffer, bufnum, group, latency;
 	var instrument, key, index, sample;
-	var startFrame, numFrames, sustain, bufferDuration, length, sampleRate;
+	var startFrame, endFrame, numFrames, sustain, bufferDuration, length, sampleRate;
 
 	#key, index = name.asString.split($:);
 	key = key.asSymbol;
@@ -274,6 +279,8 @@ Functions for sending synths to the server.
 			}
 		);
 
+		endFrame = sustain * sampleRate; // are we looping?
+
 		amp = pow(gain, 4);
 
 		if(scheduleTime.notNil) {
@@ -303,6 +310,7 @@ Functions for sending synths to the server.
 				bufnum: bufnum,
 				sustain: sustain,
 				startFrame: startFrame,
+				endFrame: endFrame,
 				start: start,
 				end: end,
 				pan: pan,
@@ -450,6 +458,11 @@ Tdef(\x, {
 
 
 
+
+
+~dirt.(nil, 1, 'CY:10', speed: 1);
+~dirt.(nil, 1, 'CY:10', speed: -1); // backwards
+~dirt.(nil, 1, 'CY:10', speed: -1, accelerate:-0.9); // backwards accellerate
 
 
 
