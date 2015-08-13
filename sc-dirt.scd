@@ -145,14 +145,15 @@ The following effect synths are freed when input is silent for longer than 0.1 s
 SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
 	var signal = In.ar(out, ~numChannels);
 	var freq = cutoff.linexp(0, 1, 200, 500); // adjust this and the vowel freqencies
-	var vowelFreqs = Select.kr(vowel, [
+	var vowelFreqs = Select.kr(vowel.poll, [
 		[800, 1150, 2800, 3500, 4950],
 		[400, 1600, 2700, 3300, 4950],
 		[350, 1700, 2700, 3700, 4950],
 		[450, 800, 2830, 3500, 4950],
 		[325, 700, 2530, 3500, 4950]
 	]);
-	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.1, resonance * 0.2); // not sure how to use this here.
+	resonance = resonance.clip(0, 1);
+	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.2, resonance * 0.5); // not sure how to use this here.
 	signal = signal.sum; // sum all filters
 	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
 	ReplaceOut.ar(out, signal)
@@ -352,7 +353,9 @@ OSCdef(\dirt, { |msg, time|
 
 
 ~dirt.(nil, 1, 'CY:10', speed: 1);
+~dirt.(nil, 1, 'CY:10', speed: 3);
 ~dirt.(nil, 1, 'CY:10', speed: -1); // backwards
+~dirt.(nil, 1, 'CY:10', speed: -3); // backwards
 ~dirt.(nil, 1, 'CY:10', speed: -1, accelerate:-0.9); // backwards accellerate
 
 
@@ -399,6 +402,16 @@ Tdef(\x, {
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1.5);
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a, resonance: 1.5);
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \o, resonance: 1.5);
+
+(
+Tdef(\x, {
+	loop {
+		~dirt.(nil, 1, 'CY:10', speed: 2, vowel: "aeiou".choose.asSymbol, resonance: 0.2);
+		(0.1 * [1, 2, 1/3]).choose.wait;
+	}
+}).play;
+)
+
 
 
 // test delay:
