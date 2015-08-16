@@ -288,6 +288,7 @@ Functions for sending synths to the server.
 			};
 
 			~sendSynth.(instrument, [
+				unit:unit,
 				speed: speed,
 				bufnum: buffer,
 				start: start,
