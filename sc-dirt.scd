@@ -366,7 +366,7 @@ Functions for sending synths to the server.
 
 OSCdef(\dirt, { |msg, time|
 	~dirt.(time, *msg[1..]);
-}, '/play');
+}, '/play').fix;
 )
 
 
