@@ -192,11 +192,6 @@ SynthDef(\dirt_monitor, { |out, in, delayBus, delay = 0|
 }).add;
 
 
-SynthDef(\dirt_delay, { |out, delayBus, delaytime, delayfeedback|
-	var signal = In.ar(delayBus, ~numChannels);
-	signal = SwitchDelay.ar(signal, 1, 1, delaytime, delayfeedback); // try this from sc3-plugins
-	Out.ar(out, signal);
-}).add;
 
 // data derived from the Vowel Quark, Bovermann et. al.
 // using the tenor register. In the future, we could inculde the quark and allow for more variation
@@ -405,6 +400,16 @@ Tdef(\x, {
 	}
 }).play;
 )
+
+(
+Tdef(\x, {
+	loop {
+		~dirt.(nil, 1, 'CY:10', 0, 0.1.rand, 1.0.rand, 1 + 1.3.rand2, 2.rand2, accelerate:0, vowel: "aeiou".choose.asSymbol, cutoff: 1000);
+		(0.2 * [1, 2, 1/3]).choose.wait;
+	}
+}).play;
+)
+
 
 // cutgroup tests
 ~dirt.(nil, 1, 'CY:10', speed: 0.02, cutgroup: -8); // really slow, to keep it on
