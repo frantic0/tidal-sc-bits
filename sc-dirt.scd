@@ -144,19 +144,19 @@ The following effect synths are freed when input is silent for longer than 0.1 s
 // we need to select formant bands for the vowels in sclang (at least this would be the most efficient)
 SynthDef(\dirt_vowel, { |out, cutoff = 440, resonance = 0.5, vowel|
 	var signal = In.ar(out, ~numChannels);
-	var freq = cutoff.linexp(0, 1, 200, 500); // adjust this and the vowel freqencies
-	var vowelFreqs = Select.kr(vowel.poll, [
-		[800, 1150, 2800, 3500, 4950],
-		[400, 1600, 2700, 3300, 4950],
-		[350, 1700, 2700, 3700, 4950],
-		[450, 800, 2830, 3500, 4950],
-		[325, 700, 2530, 3500, 4950]
-	]);
-	resonance = resonance.clip(0, 1);
-	signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.2, resonance * 0.5); // not sure how to use this here.
+	var freq = cutoff; //.linexp(0, 1, 200, 500); // adjust this and the vowel freqencies
+	var vowelFreqs = \vowelFreqs.ir([800, 1150, 2800, 3500, 4950]);
+	var ampMul;
+
+	ampMul = resonance.linexp(0, 1, 1, 16); // balance for energy loss
+	resonance = resonance.linexp(0, 1, 1, 0.001);
+	freq = (freq / 440) * vowelFreqs;
+	//signal = Formlet.ar(signal, (cutoff / 440) * vowelFreqs, resonance * 0.02, resonance * 0.5);
+	signal = BPF.ar(signal, freq, resonance, ampMul);
 	signal = signal.sum; // sum all filters
-	DetectSilence.ar(LeakDC.ar(signal), doneAction:2);
-	ReplaceOut.ar(out, signal)
+	// in the following we add a line to avoid hanging notes if signal is zero
+	DetectSilence.ar(LeakDC.ar(signal) + Line.ar(1, 0, 0.0001), doneAction:2);
+	ReplaceOut.ar(out, signal);
 }).add;
 
 // would be nice to have some more parameters in some cases
@@ -208,7 +208,7 @@ Functions for sending synths to the server.
 		-1, // no id
 		1, // add action: addToTail
 		1, // send to group 1
-		*args // append all other args
+		*args.asOSCArgArray // append all other args
 	)
 };
 
@@ -226,6 +226,7 @@ Functions for sending synths to the server.
 
 	var amp, allbufs, buffer, group, latency;
 	var instrument, key, index, sample;
+	var vowelFreqs;
 	var temp;
 
 	#key, index = name.asString.split($:);
@@ -242,6 +243,14 @@ Functions for sending synths to the server.
 	};
 
 	if(speed < 0) { temp = end; end = start; start = temp;  };
+
+	vowelFreqs = [
+		[800, 1150, 2800, 3500, 4950],
+		[400, 1600, 2700, 3300, 4950],
+		[350, 1700, 2700, 3700, 4950],
+		[450, 800, 2830, 3500, 4950],
+		[325, 700, 2530, 3500, 4950]
+	];
 
 	if(allbufs.notNil or: { SynthDescLib.at(key).notNil }) {
 
@@ -289,7 +298,7 @@ Functions for sending synths to the server.
 					~sendSynth.(\dirt_vowel,
 						[
 							out: ~bus.index,
-							vowel: vowel,
+							vowelFreqs: vowelFreqs.clipAt(vowel),
 							cutoff: cutoff,
 							resonance: resonance
 						]
@@ -349,6 +358,10 @@ OSCdef(\dirt, { |msg, time|
 )
 
 
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a, resonance: 0.6);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \o, resonance: 0.6);
+
 // some tests
 
 
@@ -397,20 +410,25 @@ Tdef(\x, {
 ~dirt.(nil, 1, 'CY:10', speed: 1, hcutoff: 3000, hresonance: 10);
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100);
 ~dirt.(nil, 1, 'CY:10', speed: 1, bandqf: 3000, bandq: 100, crush: 4);
+
+
+// test vowels
 ~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a);
 
-~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1.5);
-~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a, resonance: 1.5);
-~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \o, resonance: 1.5);
+
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \i, resonance: 1);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \a, resonance: 0.6);
+~dirt.(nil, 1, 'CY:10', speed: 1, vowel: \o, resonance: 0.6);
 
 (
 Tdef(\x, {
 	loop {
-		~dirt.(nil, 1, 'CY:10', speed: 2, vowel: "aeiou".choose.asSymbol, resonance: 0.2);
-		(0.1 * [1, 2, 1/3]).choose.wait;
+		~dirt.(nil, 1, 'CY:1', speed: 0.5, vowel: "aeiou".choose.asSymbol, resonance: 0.3);
+		(1 * [1, 2, 1/3]).choose.wait;
 	}
 }).play;
 )
+s.reboot
 
 
 
